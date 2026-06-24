@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/api";
-import { notifyMessage, notifyError } from "../utilts/notify";
+import { notifyMessage, notifyError } from "../utils/notify";
 import { ScaleLoader } from "react-spinners";
 
 import { useAuth } from "../context/AuthContext";
