@@ -14,6 +14,7 @@ import VideoGallery from "./pages/VideoGallery";
 import User from "./pages/User";
 import Permission from "./pages/Permission";
 import Role from "./pages/Role";
+import Payment from "./pages/Payment";
 
 function App() {
   useEffect(() => {
@@ -40,10 +41,9 @@ function App() {
             <Route path="/dashboard/alumni" element={<AlumniDashboard />} />
             <Route path="/dashboard/events" element={<AlumniDashboard />} />
             <Route path="/dashboard/jobs" element={<AlumniDashboard />} />
-            <Route path="/dashboard/messages" element={<AlumniDashboard />} />
+            <Route path="/dashboard/payment" element={<Payment />} />
             <Route path="/dashboard/profile" element={<AlumniDashboard />} />
             <Route path="/dashboard/settings" element={<AlumniDashboard />} />
-            
           </Route>
         </Route>
       </Routes>

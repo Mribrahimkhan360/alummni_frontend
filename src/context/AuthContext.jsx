@@ -1,63 +1,98 @@
-import React, {createContext,useContext, useEffect, useState} from 'react'
-import api from '../api/api';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import authService from '../api/authService';
 
 const AuthContext = createContext();
+
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
-        throw new Error("useAuth must be used within AuthProvider");
+        throw new Error('useAuth must be used within AuthProvider');
     }
-    return [context.user, context.updateAuthState, context];
+    return context;
 };
 
-export const AuthProvider = ({children}) => {
+export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [roles, setRoles] = useState([]);
+    const [permissions, setPermissions] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    
-  useEffect(() => {
-    // Check if the user is already logged in
-    checkAuth(); 
-  }, []);
+    useEffect(() => {
+        checkAuth();
+    }, []);
 
-  const checkAuth = async () => {
-    try {
-     const token = localStorage.getItem('access_token');
-      if (token) {
+    const checkAuth = async () => {
         try {
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const response = await api.get("/user");
-          setUser(response.data);
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
+            const response = await authService.getUser();
+            const { user: userData, roles: userRoles, permissions: userPermissions } = response.data;
+            setUser(userData);
+            setRoles(userRoles || []);
+            setPermissions(userPermissions || []);
         } catch (err) {
-          console.error("Error fetching user data:", err);
-          localStorage.removeItem('token_type');
-          localStorage.removeItem('access_token');
-          delete api.defaults.headers.common['Authorization'];
+            console.error('Auth check failed:', err);
+            clearAuthState();
+        } finally {
+            setLoading(false);
         }
-      }
-    } catch (err) {
-      console.error("Error checking authentication:", err);
-      clearAuthState();
-    }
-    setLoading(false);
-  };
-  const clearAuthState = ()=>{
-    localStorage.removeItem('token_type');
-    localStorage.removeItem('access_token');
-    delete api.defaults.headers.common['Authorization'];
-    setUser(null);
-  }
+    };
 
     const updateAuthState = (data) => {
-        localStorage.setItem('token_type', data.token_type);
         localStorage.setItem('access_token', data.access_token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${data.access_token}`;
         setUser(data.user);
-    }
+        const roleNames = data.user?.roles?.map(r => r.name) || [];
+        setRoles(roleNames);
+        authService.getUser().then(res => {
+            setPermissions(res.data.permissions || []);
+        }).catch(() => {});
+    };
+
+    const clearAuthState = () => {
+        localStorage.removeItem('access_token');
+        setUser(null);
+        setRoles([]);
+        setPermissions([]);
+    };
+
+    const logout = async () => {
+        try {
+            await authService.logout();
+        } catch (err) {
+            console.error('Logout error:', err);
+        } finally {
+            clearAuthState();
+        }
+    };
+
+    const hasRole = (role) => roles.includes(role);
+
+    const hasPermission = (permission) => permissions.includes(permission);
+
+    const hasAnyRole = (roleList) => roleList.some(r => roles.includes(r));
+
+    const hasAnyPermission = (permissionList) => permissionList.some(p => permissions.includes(p));
 
     return (
-        <AuthContext.Provider value={{ user, loading, updateAuthState,checkAuth,clearAuthState }}>
+        <AuthContext.Provider value={{
+            user,
+            roles,
+            permissions,
+            loading,
+            updateAuthState,
+            checkAuth,
+            clearAuthState,
+            logout,
+            hasRole,
+            hasPermission,
+            hasAnyRole,
+            hasAnyPermission,
+        }}>
             {children}
         </AuthContext.Provider>
     );
-}
+};
